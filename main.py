@@ -15,6 +15,7 @@ def main(args):
 
     for p in puzzles:
         print(p)
+        print(p.is_complete())
 
 
 if __name__ == "__main__":

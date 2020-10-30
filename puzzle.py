@@ -9,6 +9,13 @@ class Puzzle:
         super().__init__()
         self.grid = np.reshape(int_list, (dimension[1], dimension[0]))
         self.tile_pos = self.__locate_empty_tile()
+        self.goal1, self.goal2 = self.__find_goals()
+
+    def is_complete(self):
+        at_1 = np.array_equal(self.grid, self.goal1)
+        at_2 = np.array_equal(self.grid, self.goal2)
+
+        return at_1 or at_2
 
     # Puzzle have 2D coordinate system origin at top left of the image
     def __getitem__(self, pos: Tuple[int, int]) -> int:
@@ -30,6 +37,17 @@ class Puzzle:
 
     def __str__(self) -> str:
         return np.array_str(self.grid)
+
+    def __find_goals(self):
+        count = self.grid.shape[0] * self.grid.shape[1]
+        lin = np.arange(count)
+        lin = np.append(lin[1:], lin[0])  # 0 tile is last
+
+        goal1 = np.reshape(lin, self.grid.shape)
+
+        goal2 = np.reshape(lin, (self.grid.shape[1], self.grid.shape[0])).T
+        return goal1, goal2
+
 
 # ======
 
