@@ -1,0 +1,5 @@
+.idea/
+datasets/
+_out/
+venv/
+__pycache__/
