@@ -7,15 +7,21 @@ from puzzle import *
 def main(args):
     in_file, out_dir, dimensions = args.input_file, args.output, json.loads(args.dimensions)
 
-    if len(dimensions) < 2:
-        raise ValueError("Invalid puzzle dimensions")
-
     create_dir(out_dir)
     puzzles = load_puzzles(in_file, dimensions)
 
     for p in puzzles:
         print(p)
-        print(p.is_complete())
+
+        # Print possible moves as Assignment desire
+        print(list(map(lambda x: (x[0], p[x[1]]), p.get_moves())))
+
+        # print(p.get_dimensions())
+        # print(p.get_current_pos())
+        print()
+
+    # For testing
+    # puzzles[0].solve(SearchType.Dijkstra)   # UCS
 
 
 if __name__ == "__main__":
