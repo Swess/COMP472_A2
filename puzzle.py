@@ -1,3 +1,4 @@
+import copy
 from typing import List, Tuple
 from solvers import ISolvable
 import numpy as np
@@ -94,14 +95,6 @@ class Puzzle(object):
         goal2 = np.reshape(lin, (self.__grid.shape[1], self.__grid.shape[0])).T
         return goal1, goal2
 
-    def get_state(self) -> PuzzleInternalState:
-        # TODO: More efficient way? Even necessary because of the copy in compute_state?
-        return self.__grid.copy()
-
-    def set_state(self, new_state: PuzzleInternalState):
-        self.__grid = new_state
-        # self.__grid = np.reshape(new_state, (self.__dimensions[1], self.__dimensions[0]))
-
     def get_moves(self) -> List[PuzzleMove]:
         moves: List[PuzzleMove] = []
         w, h = self.__dimensions
@@ -176,11 +169,11 @@ class Puzzle(object):
         w, h = self.__dimensions
         cost, tile_pos, direction = move_to_apply
         tile_x, tile_y = tile_pos
-        empty_tile_pos = ((tile_x + direction[0]) % w), ((tile_y + direction[1]) % h)
+        new_empty_tile_pos = ((tile_x + direction[0]) % w), ((tile_y + direction[1]) % h)
 
         # TODO: Clone from_state to not return a reference? Necessary?
-        computed_state = from_state.copy()
-        swap(computed_state, tile_pos, empty_tile_pos)
+        computed_state = copy.deepcopy(from_state)
+        swap(computed_state, tile_pos, new_empty_tile_pos)
 
         return Puzzle.from_state(computed_state, tile_pos)
 
@@ -202,7 +195,7 @@ class Puzzle(object):
         return np.array_str(self.__grid)
 
     def __hash__(self):
-        # TODO !
+        # TODO! Necessary!
         pass
 
 

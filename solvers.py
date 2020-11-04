@@ -24,14 +24,6 @@ class ISolvable(metaclass=ABCMeta):
                 NotImplemented)
 
     @abstractmethod
-    def get_state(self) -> ndarray:
-        pass
-
-    @abstractmethod
-    def set_state(self, new_state: ndarray):
-        pass
-
-    @abstractmethod
     def get_moves(self) -> List[Any]:
         pass
 
