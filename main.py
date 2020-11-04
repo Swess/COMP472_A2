@@ -1,7 +1,7 @@
 import argparse
 import json
 from helpers import *
-from puzzle import *
+from puzzle import load_puzzles
 
 
 def main(args):

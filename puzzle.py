@@ -2,21 +2,50 @@ from typing import List, Tuple
 from solvers import ISolvable
 import numpy as np
 
+PuzzleInternalState = np.ndarray
+PuzzleTilePos = Tuple[int, int]
+IntDirection2D = Tuple[int, int]
+PuzzleMove = Tuple[int, PuzzleTilePos, IntDirection2D]  # Cost, TileToMove, Direction
 
-# Main objects
-class Puzzle(ISolvable):
+
+# Main Puzzle objects
+# Also represents a unique puzzle entire state
+class Puzzle(object):
     """Puzzle grid with X & Y Axis representation with a coordinate system with the origin
     at the top left of the grid."""
 
-    def __init__(self, int_list: List[int], dimension: Tuple[int, int]) -> None:
+    def __init__(self, grid: PuzzleInternalState, dimension: Tuple[int, int],
+                 empty_tile_position: PuzzleTilePos) -> None:
         super().__init__()
-        self.__dimensions = dimension
         if len(dimension) < 2 or dimension[0] < 2 or dimension[1] < 2:
             raise ValueError("Invalid puzzle dimensions. Width & Height needs greater or equal than 2.")
 
-        self.__grid = np.reshape(int_list, (dimension[1], dimension[0]))
-        self.__tile_pos = self.__locate_empty_tile()
+        self.__dimensions = dimension
+        self.__grid = grid
+        self.__tile_pos = empty_tile_position
+
+        # self.__grid = np.reshape(int_list, (dimension[1], dimension[0]))
+        # self.__initial_state = self.__grid.flatten()
+        # self.__tile_pos = self.__locate_empty_tile()
+
+        # TODO: To remove and replace with 2 puzzle instances
         self.goal1, self.goal2 = self.__find_goals_states()
+
+    @classmethod
+    def from_state(cls, state: PuzzleInternalState, tile_pos: PuzzleTilePos = None) -> __class__:
+        if tile_pos is None:
+            pos = Puzzle.locate_tile(state, 0)
+        else:
+            pos = tile_pos
+
+        p = cls(state, (state.shape[1], state.shape[0]), pos)
+
+        return p
+
+    @classmethod
+    def from_int_list(cls, int_list: List[int], dimension: Tuple[int, int]) -> __class__:
+        grid = np.reshape(int_list, (dimension[1], dimension[0]))
+        return cls.from_state(grid)
 
     def get_dimensions(self):
         return self.__dimensions
@@ -25,6 +54,8 @@ class Puzzle(ISolvable):
         return self.__tile_pos
 
     def is_complete(self) -> bool:
+        # TODO: Convert to state comparing or Puzzle Comparing (with 2 goals states)
+
         # Quick check. 0 Tile has to minimally be in bottom-right corner.
         if self.get_current_pos() != (self.__dimensions[0] - 1, self.__dimensions[1] - 1):
             return False
@@ -38,12 +69,13 @@ class Puzzle(ISolvable):
     def __getitem__(self, pos: Tuple[int, int]) -> int:
         return self.__grid[pos[1], pos[0]]
 
-    def __locate_empty_tile(self) -> Tuple[int, int]:
+    @staticmethod
+    def locate_tile(state: PuzzleInternalState, tile: int) -> Tuple[int, int]:
         x, y = 0, 0
 
-        for row in self.__grid:
-            for tile in row:
-                if tile == 0:
+        for row in state:
+            for t in row:
+                if t == tile:
                     return x, y
                 x += 1
 
@@ -51,9 +83,6 @@ class Puzzle(ISolvable):
             x = 0
 
         raise Exception("No empty tile marked as '0' found in the puzzle definition.")
-
-    def __str__(self) -> str:
-        return np.array_str(self.__grid)
 
     def __find_goals_states(self):
         count = self.__grid.shape[0] * self.__grid.shape[1]
@@ -65,24 +94,20 @@ class Puzzle(ISolvable):
         goal2 = np.reshape(lin, (self.__grid.shape[1], self.__grid.shape[0])).T
         return goal1, goal2
 
-    ## Solvable to be passed in a Solver
-    # def solve(self, search_type: SearchType):
-    #     if search_type is SearchType.DIJKSTRA:
-    #         solver = Djikstra()
-    #     if search_type is SearchType.GBFS:
-    #         pass
-    #     if search_type is SearchType.ASTAR:
-    #         pass
-
-    def get_state(self):
+    def get_state(self) -> PuzzleInternalState:
+        # TODO: More efficient way? Even necessary because of the copy in compute_state?
         return self.__grid.copy()
 
-    def get_moves(self) -> List[Tuple[int, Tuple[int, int]]]:
-        moves = []
+    def set_state(self, new_state: PuzzleInternalState):
+        self.__grid = new_state
+        # self.__grid = np.reshape(new_state, (self.__dimensions[1], self.__dimensions[0]))
+
+    def get_moves(self) -> List[PuzzleMove]:
+        moves: List[PuzzleMove] = []
         w, h = self.__dimensions
         x, y = self.__tile_pos
 
-        def cost(tile) -> int:
+        def cost(tile: PuzzleTilePos) -> int:
             # Wrapped Horizontally
             if (w > 2) and ((tile[0] == 0 and x == w - 1) or (tile[0] == w - 1 and x == 0)):
                 return 2
@@ -94,7 +119,7 @@ class Puzzle(ISolvable):
             # Default: Regular
             return 1
 
-        # Adjacent Moves (Regular [Cost: 1] & Wrapping [Cost: 2])
+        # Adjacent tiles (Regular [Cost: 1] & Wrapping [Cost: 2])
         top = x, ((y - 1) % h)
         right = ((x + 1) % w), y
         bottom = x, ((y + 1) % h)
@@ -103,52 +128,89 @@ class Puzzle(ISolvable):
         # No duplicate tiles if wrapped with Width or Height of 2
         laterals = []
         if top == bottom:
-            laterals.append(top)
+            laterals.append((top, (0, -1)))
         else:
-            laterals.append(top)
-            laterals.append(bottom)
+            laterals.append((top, (0, -1)))
+            laterals.append((bottom, (0, 1)))
 
         if right == left:
-            laterals.append(right)
+            laterals.append((right, (-1, 0)))
         else:
-            laterals.append(right)
-            laterals.append(left)
+            laterals.append((right, (-1, 0)))
+            laterals.append((left, (1, 0)))
 
         # Add with tile's cost
         for t in laterals:
-            moves.append((cost(t), t))
+            moves.append((cost(t[0]), t[0], t[1]))
 
         # Diagonals
         diagonals = []
         if (h, w) != (2, 2):  # Don't consider 2x2 puzzles
-            d1, d2 = None, None
+            d1, d2, dir1, dir2 = None, None, None, None
             # Top left || Bottom Right
             if (x, y) == (0, 0) or (x, y) == (w - 1, h - 1):
-                d1 = ((x - 1) % w), ((y - 1) % h)
-                d2 = ((x + 1) % w), ((y + 1) % h)
+                d1, dir1 = (((x - 1) % w), ((y - 1) % h)), (1, 1)
+                d2, dir2 = (((x + 1) % w), ((y + 1) % h)), (-1, -1)
 
             # Top right || Bottom Left
             if (x, y) == (w - 1, 0) or (x, y) == (0, h - 1):
-                d1 = ((x - 1) % w), ((y + 1) % h)
-                d2 = ((x + 1) % w), ((y - 1) % h)
+                d1, dir1 = (((x - 1) % w), ((y + 1) % h)), (1, -1)
+                d2, dir2 = (((x + 1) % w), ((y - 1) % h)), (-1, 1)
 
             if d1 and d2:
-                diagonals.append(d1)
-                diagonals.append(d2)
+                diagonals.append((d1, dir1))
+                diagonals.append((d2, dir2))
 
         # Add with tile's cost
         for t in diagonals:
-            moves.append((3, t))
+            moves.append((3, t[0], t[1]))
 
-        # [(cost, (tile.x, tile.y)), ...]
+        # [(cost, (tile.x, tile.y), 2D_Direction), ...]
         return moves
+
+    def compute_move(self, from_state: __class__, move_to_apply: PuzzleMove) -> __class__:
+        def swap(a, p1: PuzzleTilePos, p2: PuzzleTilePos):
+            # Tuple unpacking swap is more efficient
+            a[p1[0]], a[p1[1]], a[p2[0]], a[p2[1]] = a[p2[0]], a[p2[1]], a[p1[0]], a[p1[1]]
+
+        w, h = self.__dimensions
+        cost, tile_pos, direction = move_to_apply
+        tile_x, tile_y = tile_pos
+        empty_tile_pos = ((tile_x + direction[0]) % w), ((tile_y + direction[1]) % h)
+
+        # TODO: Clone from_state to not return a reference? Necessary?
+        computed_state = from_state.copy()
+        swap(computed_state, tile_pos, empty_tile_pos)
+
+        return Puzzle.from_state(computed_state, tile_pos)
+
+    def __eq__(self, o: object) -> bool:
+        # Reference to same obj
+        if super().__eq__(o):
+            return True
+
+        if not isinstance(o, Puzzle):
+            return False
+
+        # Compare only internal state
+        return np.array_equal(self.__grid, o.__grid)
+
+    def __ne__(self, o: object) -> bool:
+        return not __eq__(o)
+
+    def __str__(self) -> str:
+        return np.array_str(self.__grid)
+
+    def __hash__(self):
+        # TODO !
+        pass
 
 
 # ======
 
 def parse_puzzle(p_list: list, dimension: Tuple[int, int]) -> Puzzle:
     int_arr = np.array(p_list, dtype=np.uint32)
-    return Puzzle(int_arr, dimension)
+    return Puzzle.from_int_list(list(int_arr), dimension)
 
 
 def load_puzzles(puzzle_filename, dimension: Tuple[int, int]) -> List[Puzzle]:
