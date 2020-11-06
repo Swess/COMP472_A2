@@ -1,2 +1,2 @@
-from .PriorityQueue import PriorityQueue, QueueEntry
+from .PriorityQueue import PriorityQueue
 from .Stack import Stack

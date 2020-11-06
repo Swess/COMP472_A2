@@ -1,7 +1,8 @@
 import argparse
 import json
 from helpers import *
-from puzzle import load_puzzles
+from puzzle import load_puzzles, find_goals
+from solvers import Djikstra
 
 
 def main(args):
@@ -12,16 +13,20 @@ def main(args):
 
     for p in puzzles:
         print(p)
-
         # Print possible moves as Assignment desire
-        print(list(map(lambda x: (x[0], p[x[1]]), p.get_moves())))
-
-        # print(p.get_dimensions())
-        # print(p.get_current_pos())
+        # print(list(map(lambda x: (x[0], p[x[1]]), p.get_moves())))
         print()
 
     # For testing
-    # puzzles[0].solve(SearchType.Dijkstra)   # UCS
+    solver = Djikstra()
+    goals = find_goals(puzzles[0])
+    steps_to_goal = solver.solve(puzzles[0], goals[0])
+
+    print("Solved it! Solution is:")
+    print()
+    for s in steps_to_goal:
+        print()
+        print(s)
 
 
 if __name__ == "__main__":

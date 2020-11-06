@@ -11,7 +11,7 @@ PuzzleMove = Tuple[int, PuzzleTilePos, IntDirection2D]  # Cost, TileToMove, Dire
 
 # Main Puzzle objects
 # Also represents a unique puzzle entire state
-class Puzzle(object):
+class Puzzle(ISolvable):
     """Puzzle grid with X & Y Axis representation with a coordinate system with the origin
     at the top left of the grid."""
 
@@ -25,15 +25,8 @@ class Puzzle(object):
         self.__grid = grid
         self.__tile_pos = empty_tile_position
 
-        # self.__grid = np.reshape(int_list, (dimension[1], dimension[0]))
-        # self.__initial_state = self.__grid.flatten()
-        # self.__tile_pos = self.__locate_empty_tile()
-
-        # TODO: To remove and replace with 2 puzzle instances
-        self.goal1, self.goal2 = self.__find_goals_states()
-
     @classmethod
-    def from_state(cls, state: PuzzleInternalState, tile_pos: PuzzleTilePos = None) -> __class__:
+    def from_state(cls, state: PuzzleInternalState, tile_pos: PuzzleTilePos = None) -> '__class__':
         if tile_pos is None:
             pos = Puzzle.locate_tile(state, 0)
         else:
@@ -44,7 +37,7 @@ class Puzzle(object):
         return p
 
     @classmethod
-    def from_int_list(cls, int_list: List[int], dimension: Tuple[int, int]) -> __class__:
+    def from_int_list(cls, int_list: List[int], dimension: Tuple[int, int]) -> '__class__':
         grid = np.reshape(int_list, (dimension[1], dimension[0]))
         return cls.from_state(grid)
 
@@ -54,21 +47,12 @@ class Puzzle(object):
     def get_current_pos(self):
         return self.__tile_pos
 
-    def is_complete(self) -> bool:
-        # TODO: Convert to state comparing or Puzzle Comparing (with 2 goals states)
-
-        # Quick check. 0 Tile has to minimally be in bottom-right corner.
-        if self.get_current_pos() != (self.__dimensions[0] - 1, self.__dimensions[1] - 1):
-            return False
-
-        at_1 = np.array_equal(self.__grid, self.goal1)
-        at_2 = np.array_equal(self.__grid, self.goal2)
-
-        return at_1 or at_2
-
     # Puzzle have 2D coordinate system origin at top left of the image
     def __getitem__(self, pos: Tuple[int, int]) -> int:
         return self.__grid[pos[1], pos[0]]
+
+    def __setitem__(self, key: Tuple[int, int], value) -> None:
+        self.__grid[key[1], key[0]] = value
 
     @staticmethod
     def locate_tile(state: PuzzleInternalState, tile: int) -> Tuple[int, int]:
@@ -84,16 +68,6 @@ class Puzzle(object):
             x = 0
 
         raise Exception("No empty tile marked as '0' found in the puzzle definition.")
-
-    def __find_goals_states(self):
-        count = self.__grid.shape[0] * self.__grid.shape[1]
-        lin = np.arange(count)
-        lin = np.append(lin[1:], lin[0])  # 0 tile is last
-
-        goal1 = np.reshape(lin, self.__grid.shape)
-
-        goal2 = np.reshape(lin, (self.__grid.shape[1], self.__grid.shape[0])).T
-        return goal1, goal2
 
     def get_moves(self) -> List[PuzzleMove]:
         moves: List[PuzzleMove] = []
@@ -161,10 +135,10 @@ class Puzzle(object):
         # [(cost, (tile.x, tile.y), 2D_Direction), ...]
         return moves
 
-    def compute_move(self, from_state: __class__, move_to_apply: PuzzleMove) -> __class__:
+    def compute_move(self, from_state: '__class__', move_to_apply: PuzzleMove) -> '__class__':
         def swap(a, p1: PuzzleTilePos, p2: PuzzleTilePos):
             # Tuple unpacking swap is more efficient
-            a[p1[0]], a[p1[1]], a[p2[0]], a[p2[1]] = a[p2[0]], a[p2[1]], a[p1[0]], a[p1[1]]
+            a[p1], a[p2] = a[p2], a[p1]
 
         w, h = self.__dimensions
         cost, tile_pos, direction = move_to_apply
@@ -175,11 +149,11 @@ class Puzzle(object):
         computed_state = copy.deepcopy(from_state)
         swap(computed_state, tile_pos, new_empty_tile_pos)
 
-        return Puzzle.from_state(computed_state, tile_pos)
+        return Puzzle.from_state(computed_state.__grid, tile_pos)
 
     def __eq__(self, o: object) -> bool:
         # Reference to same obj
-        if super().__eq__(o):
+        if self is o:
             return True
 
         if not isinstance(o, Puzzle):
@@ -195,11 +169,21 @@ class Puzzle(object):
         return np.array_str(self.__grid)
 
     def __hash__(self):
-        # TODO! Necessary!
-        pass
+        return hash(str(self.__grid))
 
 
 # ======
+def find_goals(puzzle: Puzzle) -> Tuple[Puzzle, Puzzle]:
+    dim = puzzle.get_dimensions()
+    count = dim[0] * dim[1]
+    lin = np.arange(count)
+    lin = np.append(lin[1:], lin[0])  # 0 tile is last
+
+    goal1 = np.reshape(lin, (dim[1], dim[0]))
+
+    goal2 = np.reshape(lin, (dim[0], dim[1])).T
+    return Puzzle.from_state(goal1), Puzzle.from_state(goal2)
+
 
 def parse_puzzle(p_list: list, dimension: Tuple[int, int]) -> Puzzle:
     int_arr = np.array(p_list, dtype=np.uint32)
