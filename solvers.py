@@ -52,6 +52,7 @@ class AStar(Solver):
                 steps.append(c)
                 c = running_states_graph_edges[c]
 
+            steps.append(c)  # Initial state
             steps.reverse()
             return steps
 
