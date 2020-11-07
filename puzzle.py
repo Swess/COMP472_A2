@@ -145,7 +145,6 @@ class Puzzle(ISolvable):
         tile_x, tile_y = tile_pos
         new_empty_tile_pos = ((tile_x + direction[0]) % w), ((tile_y + direction[1]) % h)
 
-        # TODO: Clone from_state to not return a reference? Necessary?
         computed_state = copy.deepcopy(from_state)
         swap(computed_state, tile_pos, new_empty_tile_pos)
 

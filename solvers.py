@@ -1,16 +1,9 @@
 from abc import ABC, abstractmethod, ABCMeta
-from enum import Enum
-from typing import TypeVar, Any, List
+from typing import TypeVar, Any, List, Callable
 
 from data_struct import *
 
 T = TypeVar('T')
-
-
-class SearchType(Enum):
-    DIJKSTRA = 1  # aka: Uniform Cost Search (UCS)
-    GBFS = 2  # aka: Greedy Breadth First Search
-    ASTAR = 3
 
 
 class ISolvable(metaclass=ABCMeta):
@@ -33,12 +26,18 @@ class ISolvable(metaclass=ABCMeta):
 
 class Solver(ABC):
     @abstractmethod
-    def solve(self, current: ISolvable, goal_state: ISolvable):
+    def solve(self, current: ISolvable, goal_state: ISolvable, heuristic_func: Callable[[ISolvable, ISolvable], float]):
+        pass
+
+    @abstractmethod
+    def f(self, g, h):
         pass
 
 
 class AStar(Solver):
-    def solve(self, current: ISolvable, goal_state: ISolvable) -> List[Any]:
+    def solve(self, current: ISolvable, goal_state: ISolvable,
+              heuristic_func: Callable[[ISolvable, ISolvable], float]) -> \
+            List[Any]:
         running_states_graph_edges = {}  # Key: Node, Value: FromNode
         open_states_set = PriorityQueue()
         open_states_set.enqueue(current, 0)
@@ -56,9 +55,7 @@ class AStar(Solver):
             steps.reverse()
             return steps
 
-        itcount = 0
         while not open_states_set.empty():
-            itcount += 1
             current_cost, current_state = open_states_set.dequeue()
             closed_states_set.add(current_state)
 
@@ -78,19 +75,25 @@ class AStar(Solver):
                 next_cost = current_cost + puzzle_move[0]
 
                 # Add or update priority
-                heuristic = self.heuristic(next_state, goal_state)
-                open_states_set.enqueue(next_state, next_cost + heuristic)
+                heuristic = heuristic_func(next_state, goal_state)
+                open_states_set.enqueue(next_state, self.f(next_cost, heuristic))
 
                 # Where from
                 running_states_graph_edges[next_state] = current_state
 
-    @abstractmethod
-    def heuristic(self, current_state: T, goal_state: T) -> float:
-        # h(n)
-        # TODO
-        pass
+    def f(self, g, h):
+        return g + h
 
 
-class Djikstra(AStar):
-    def heuristic(self, current_state: T, goal_state: T) -> float:
-        return 1
+# Uniform Cost Search
+class UCS(AStar):
+    def f(self, g, h):
+        # Search by: total cost from the root to node n
+        return g
+
+
+# Greedy Best First Search
+class GBFS(AStar):
+    def f(self, g, h):
+        # Search by: total cost from the root to node n
+        return h
