@@ -35,21 +35,27 @@ class Solver(ABC):
 
 
 class AStar(Solver):
+    def __init__(self):
+        self.search_path = None
+        self.nodes_costs = None
+
     def solve(self, current: ISolvable, goal_state: ISolvable,
               heuristic_func: Callable[[ISolvable, ISolvable], float]) -> \
-            Tuple[Dict[ISolvable, Tuple[ISolvable, Any]], List[ISolvable]]:
-        states_search_graph: Dict[ISolvable, Tuple[ISolvable, Any]] = {}  # Key: Node, Value: FromNode
+            Tuple[Dict[ISolvable, Tuple[ISolvable, Any]], Dict[ISolvable, Tuple[int, int]]]:
+        self.nodes_costs = {}
+        states_graph: Dict[ISolvable, Tuple[ISolvable, Any]] = {}  # Key: Node, Value: FromNode
         open_states_set = PriorityQueue()
-        open_states_set.enqueue(current, 0)
+        open_states_set.enqueue((current, 0, heuristic_func(current, goal_state)), 0)
         closed_states_set = {}
 
         while not open_states_set.empty():
-            current_cost, current_state = open_states_set.dequeue()
-            closed_states_set[current_state] = current_cost  # Add in ordered dict representing the closed set
+            current_cost, node = open_states_set.dequeue()
+            current_state, g, h = node
+            closed_states_set[current_state] = (g, h)  # Add in ordered dict representing the closed set
 
             # Reached goal, return steps to goal + search data
             if current_state == goal_state:
-                return states_search_graph, list(closed_states_set.keys())
+                return states_graph, closed_states_set
 
             next_moves = current_state.get_moves()
             for puzzle_move in next_moves:
@@ -63,11 +69,14 @@ class AStar(Solver):
                 next_cost = current_cost + puzzle_move[0]
 
                 # Add or update priority
-                heuristic = heuristic_func(next_state, goal_state)
-                open_states_set.enqueue(next_state, self.f(next_cost, heuristic))
+                next_heuristic = heuristic_func(next_state, goal_state)
+                open_states_set.enqueue((next_state, next_cost, next_heuristic), self.f(next_cost, next_heuristic))
 
                 # Where from, and with what move
-                states_search_graph[next_state] = (current_state, puzzle_move)
+                states_graph[next_state] = (current_state, puzzle_move)
+
+        # If open set empty, failed to solve
+        return None, None
 
     def f(self, g, h):
         return g + h
@@ -83,5 +92,5 @@ class UCS(AStar):
 # Greedy Best First Search
 class GBFS(AStar):
     def f(self, g, h):
-        # Search by: total cost from the root to node n
+        # Search by: better heuristic only
         return h

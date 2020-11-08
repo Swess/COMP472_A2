@@ -55,7 +55,7 @@ def main(args):
     # Solvers with each heuristics
     solvers = {
         "UCS": (UCS(), {
-            "default": lambda current, goal: 1
+            "default": lambda current, goal: 0
         }),
         "GBFS": (GBFS(), {
             "h1": lambda current, goal: 1,
@@ -76,6 +76,7 @@ def main(args):
         for name in solvers:
             solver, heuristics_functions = solvers[name]
             for h_name in heuristics_functions:
+                print("-----")
                 h_func = heuristics_functions[h_name]
 
                 if h_name == "default":
@@ -90,14 +91,23 @@ def main(args):
 
                 # TODO: Parallel Search for both goals
                 t_start = time.monotonic()
-                search_graph, search_path = solver.solve(p, goals[0], h_func)
+                search_graph, visited_nodes = solver.solve(p, goals[0], h_func)
                 elapsed = time.monotonic() - t_start
                 elapsed = "{:.4f}".format(elapsed)
 
-                print(f"Solved it in {elapsed} seconds! Solution at '{out_sol_file}'.")
-                steps_to_goal = retrace_steps(search_graph, goals[0])
+                # Failed
+                if search_graph is None:
+                    print("Failed to find solution...")
+                    with open(out_sol_file, 'w') as sol_file:
+                        sol_file.write("no solution")
+                    with open(out_search_file, 'w') as search_file:
+                        search_file.write("no solution")
+                    continue
+
+                print(f"Solved it in {elapsed} seconds!")
 
                 # Solution output file
+                steps_to_goal = retrace_steps(search_graph, goals[0])
                 with open(out_sol_file, 'w') as sol_file:
                     total_cost = 0
                     for state, move_cost, tile_moved in steps_to_goal:
@@ -109,11 +119,16 @@ def main(args):
                         sol_file.write(f"{tile_moved} {str(move_cost)} {state.to_single_line_str()}\n")
                     sol_file.write(f"{total_cost} {elapsed}")
 
-                # TODO: Write search file
+                print(f"Solution at '{out_sol_file}'.")
+
                 # Search path file
                 with open(out_search_file, 'w') as search_file:
-                    for s in search_path:
-                        info = search_graph[search_file]
+                    for n in visited_nodes:
+                        g, h = visited_nodes[n]
+                        f = solver.f(g, h)
+                        search_file.write(f"{f} {g} {h} {n.to_single_line_str()}\n")
+
+                print(f"Search path at '{out_search_file}'.")
 
 if __name__ == "__main__":
     arg_parser = argparse.ArgumentParser(description='Solves given X-Puzzle with different solvers.')
