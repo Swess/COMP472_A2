@@ -40,7 +40,7 @@ class AStar(Solver):
         self.nodes_costs = None
 
     def solve(self, current: ISolvable, goal_state: ISolvable,
-              heuristic_func: Callable[[ISolvable, ISolvable], float]) -> \
+              heuristic_func: Callable[[ISolvable, ISolvable], int]) -> \
             Tuple[Dict[ISolvable, Tuple[ISolvable, Any]], Dict[ISolvable, Tuple[int, int]]]:
         self.nodes_costs = {}
         states_graph: Dict[ISolvable, Tuple[ISolvable, Any]] = {}  # Key: Node, Value: FromNode

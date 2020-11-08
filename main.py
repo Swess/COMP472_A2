@@ -4,6 +4,7 @@ import random
 import time
 
 from helpers import *
+from heuristics import h0, h1, h2
 from puzzle import *
 from solvers import *
 import numpy as np
@@ -53,18 +54,15 @@ def main(args):
     puzzles = load_puzzles(in_file, dimensions)
 
     # Solvers with each heuristics
+    demo_heuristics_func_set = {"h0": h0}
+    heuristics_func_set = {"h1": h0, "h2": h2}
+
     solvers = {
-        "UCS": (UCS(), {
-            "default": lambda current, goal: 0
-        }),
-        "GBFS": (GBFS(), {
-            "h1": lambda current, goal: 1,
-            # "h2": lambda current, goal: 1
-        }),
-        "AStar": (AStar(), {
-            "h1": lambda current, goal: 1,
-            # "h2": lambda current, goal: 1
-        })
+        # "UCS": (UCS(), {
+        #     "default": lambda current, goal: 0
+        # }),
+        "GBFS": (GBFS(), heuristics_func_set),
+        "AStar": (AStar(), heuristics_func_set)
     }
 
     for i, p in enumerate(puzzles):
@@ -130,7 +128,14 @@ def main(args):
 
                 print(f"Search path at '{out_search_file}'.")
 
+
 if __name__ == "__main__":
+    print("<<<<<<<<<<<<>>>>>>>>>>>>")
+    print("COMP 472 - Assignment 2")
+    print("Isaac Doré - 40043159")
+    print("<<<<<<<<<<<<>>>>>>>>>>>>")
+    print()
+
     arg_parser = argparse.ArgumentParser(description='Solves given X-Puzzle with different solvers.')
 
     arg_parser.add_argument('input_file', metavar='input_file', type=str,
