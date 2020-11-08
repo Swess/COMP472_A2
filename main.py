@@ -4,7 +4,7 @@ import random
 import time
 
 from helpers import *
-from puzzle import load_puzzles, find_goals
+from puzzle import *
 from solvers import *
 import numpy as np
 
@@ -26,6 +26,20 @@ def generate_rand_puzzles(n, dimensions):
         file.writelines(lines)
 
 
+# Retracing steps of solution backward in resulting search graph
+def retrace_steps(search_graph: Dict[Puzzle, Tuple[Puzzle, Any]], final_state: Puzzle) -> List[Tuple[Puzzle, int, int]]:
+    steps = []
+    c = final_state
+    while c in search_graph.keys():
+        prev_state, move = search_graph[c]
+        steps.append((c, move[0], prev_state[move[1]]))
+        c = prev_state
+
+    steps.append((c, 0, 0))  # Initial state
+    steps.reverse()
+    return steps
+
+
 def main(args):
     gen, in_file, out_dir, dimensions = args.generate, args.input_file, args.output, json.loads(args.dimensions)
 
@@ -45,15 +59,15 @@ def main(args):
         }),
         "GBFS": (GBFS(), {
             "h1": lambda current, goal: 1,
-            #"h2": lambda current, goal: 1
+            # "h2": lambda current, goal: 1
         }),
         "AStar": (AStar(), {
             "h1": lambda current, goal: 1,
-            #"h2": lambda current, goal: 1
+            # "h2": lambda current, goal: 1
         })
     }
 
-    for p in puzzles:
+    for i, p in enumerate(puzzles):
         print("===============")
         print("Will solve puzzle:")
         print(p)
@@ -65,25 +79,41 @@ def main(args):
                 h_func = heuristics_functions[h_name]
 
                 if h_name == "default":
+                    f_name = f"{i}_{name.lower()}"
                     print(f"Solving with solver {name}...")
                 else:
+                    f_name = f"{i}_{name.lower()}-{h_name}"
                     print(f"Solving with solver {name}, with heuristic '{h_name}'...")
+
+                out_sol_file = f"./_out/{f_name}_solution.txt"
+                out_search_file = f"./_out/{f_name}_search.txt"
 
                 # TODO: Parallel Search for both goals
                 t_start = time.monotonic()
-                steps_to_goal = solver.solve(p, goals[0], h_func)
+                search_graph, search_path = solver.solve(p, goals[0], h_func)
                 elapsed = time.monotonic() - t_start
+                elapsed = "{:.4f}".format(elapsed)
 
-                print(f"Solved it in {elapsed} seconds! Solution is:")
-                print()
-                for s in steps_to_goal:
-                    print()
-                    print(s)
+                print(f"Solved it in {elapsed} seconds! Solution at '{out_sol_file}'.")
+                steps_to_goal = retrace_steps(search_graph, goals[0])
 
-        # Print possible moves as Assignment desire
-        # print(list(map(lambda x: (x[0], p[x[1]]), p.get_moves())))
-        print()
+                # Solution output file
+                with open(out_sol_file, 'w') as sol_file:
+                    total_cost = 0
+                    for state, move_cost, tile_moved in steps_to_goal:
+                        # Display solution states in console
+                        # print(f"Move tile {tile_moved}, for cost of {move_cost}.")
+                        # print(state)
 
+                        total_cost += move_cost
+                        sol_file.write(f"{tile_moved} {str(move_cost)} {state.to_single_line_str()}\n")
+                    sol_file.write(f"{total_cost} {elapsed}")
+
+                # TODO: Write search file
+                # Search path file
+                with open(out_search_file, 'w') as search_file:
+                    for s in search_path:
+                        info = search_graph[search_file]
 
 if __name__ == "__main__":
     arg_parser = argparse.ArgumentParser(description='Solves given X-Puzzle with different solvers.')

@@ -164,6 +164,13 @@ class Puzzle(ISolvable):
     def __ne__(self, o: object) -> bool:
         return not __eq__(o)
 
+    def to_single_line_str(self):
+        str_l = []
+        for r in self.__grid.tolist():
+            for c in r:
+                str_l.append(str(c))
+        return " ".join(str_l)
+
     def __str__(self) -> str:
         return np.array_str(self.__grid)
 

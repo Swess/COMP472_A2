@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod, ABCMeta
-from typing import TypeVar, Any, List, Callable
+from typing import TypeVar, Any, List, Callable, Tuple, Dict
 
 from data_struct import *
 
@@ -37,31 +37,19 @@ class Solver(ABC):
 class AStar(Solver):
     def solve(self, current: ISolvable, goal_state: ISolvable,
               heuristic_func: Callable[[ISolvable, ISolvable], float]) -> \
-            List[Any]:
-        running_states_graph_edges = {}  # Key: Node, Value: FromNode
+            Tuple[Dict[ISolvable, Tuple[ISolvable, Any]], List[ISolvable]]:
+        states_search_graph: Dict[ISolvable, Tuple[ISolvable, Any]] = {}  # Key: Node, Value: FromNode
         open_states_set = PriorityQueue()
         open_states_set.enqueue(current, 0)
-        closed_states_set = set()
-
-        # Retracing steps backward
-        def retrace_steps(final_state) -> List[Any]:
-            steps = []
-            c = final_state
-            while c in running_states_graph_edges:
-                steps.append(c)
-                c = running_states_graph_edges[c]
-
-            steps.append(c)  # Initial state
-            steps.reverse()
-            return steps
+        closed_states_set = {}
 
         while not open_states_set.empty():
             current_cost, current_state = open_states_set.dequeue()
-            closed_states_set.add(current_state)
+            closed_states_set[current_state] = current_cost  # Add in ordered dict representing the closed set
 
-            # Reached goal, return steps to goal
+            # Reached goal, return steps to goal + search data
             if current_state == goal_state:
-                return retrace_steps(current_state)
+                return states_search_graph, list(closed_states_set.keys())
 
             next_moves = current_state.get_moves()
             for puzzle_move in next_moves:
@@ -78,8 +66,8 @@ class AStar(Solver):
                 heuristic = heuristic_func(next_state, goal_state)
                 open_states_set.enqueue(next_state, self.f(next_cost, heuristic))
 
-                # Where from
-                running_states_graph_edges[next_state] = current_state
+                # Where from, and with what move
+                states_search_graph[next_state] = (current_state, puzzle_move)
 
     def f(self, g, h):
         return g + h
