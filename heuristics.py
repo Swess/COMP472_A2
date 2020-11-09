@@ -1,5 +1,5 @@
 import math
-
+import numpy as np
 from puzzle import Puzzle
 
 
@@ -37,7 +37,13 @@ def h1(current: Puzzle, goal: Puzzle) -> int:
 
     return total
 
+
 def h2(current: Puzzle, goal: Puzzle) -> int:
     # Sum of element-wise numerical difference of tile values
     # Ex: Tile should have 6, but has 4 => 6-4
-    return 1
+    grid1 = current.get_internal_state()
+    grid2 = goal.get_internal_state()
+    sub = np.subtract(grid1, grid2)
+    diff = np.abs(sub)
+    x = np.sum(diff.flatten())
+    return x

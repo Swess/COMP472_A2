@@ -41,6 +41,9 @@ class Puzzle(ISolvable):
         grid = np.reshape(int_list, (dimension[1], dimension[0]))
         return cls.from_state(grid)
 
+    def get_internal_state(self):
+        return self.__grid
+
     def get_dimensions(self):
         return self.__dimensions
 

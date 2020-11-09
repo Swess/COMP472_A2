@@ -55,16 +55,17 @@ def main(args):
 
     # Solvers with each heuristics
     demo_heuristics_func_set = {"h0": h0}
-    heuristics_func_set = {
-                            #"h1": h1,
-                           "h2": h2
-                           }
+    heuristics_func_set = {"h1": h1, "h2": h2}
+    test = {"h1": h1}
+
+    heuristics_func_set = test
+
 
     solvers = {
         # "UCS": (UCS(), {
         #     "default": lambda current, goal: 0
         # }),
-        "GBFS": (GBFS(), heuristics_func_set),
+        # "GBFS": (GBFS(), heuristics_func_set),
         "AStar": (AStar(), heuristics_func_set)
     }
 
@@ -87,8 +88,8 @@ def main(args):
                     f_name = f"{i}_{name.lower()}-{h_name}"
                     print(f"Solving with solver {name}, with heuristic '{h_name}'...")
 
-                out_sol_file = f"./_out/{f_name}_solution.txt"
-                out_search_file = f"./_out/{f_name}_search.txt"
+                out_sol_file = f"./{out_dir}{f_name}_solution.txt"
+                out_search_file = f"./{out_dir}{f_name}_search.txt"
 
                 # TODO: Parallel Search for both goals
                 t_start = time.monotonic()
