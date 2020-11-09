@@ -41,7 +41,7 @@ class AStar(Solver):
 
     def solve(self, current: ISolvable, goal_state: ISolvable,
               heuristic_func: Callable[[ISolvable, ISolvable], int]) -> \
-            Tuple[Dict[ISolvable, Tuple[ISolvable, Any]], Dict[ISolvable, Tuple[int, int]]]:
+            Tuple[Dict[ISolvable, Tuple[ISolvable, Any]], Dict[ISolvable, Tuple[int, int, int]]]:
         self.nodes_costs = {}
         states_graph: Dict[ISolvable, Tuple[ISolvable, Any]] = {}  # Key: Node, Value: FromNode
         open_states_set = PriorityQueue()
@@ -49,9 +49,9 @@ class AStar(Solver):
         closed_states_set = {}
 
         while not open_states_set.empty():
-            current_cost, node = open_states_set.dequeue()
+            f, node = open_states_set.dequeue()
             current_state, g, h = node
-            closed_states_set[current_state] = (g, h)  # Add in ordered dict representing the closed set
+            closed_states_set[current_state] = (f, g, h)  # Add in ordered dict representing the closed set
 
             # Reached goal, return steps to goal + search data
             if current_state == goal_state:
@@ -66,7 +66,7 @@ class AStar(Solver):
                     continue
 
                 # CostSoFar + MoveCost
-                next_cost = current_cost + puzzle_move[0]
+                next_cost = g + puzzle_move[0]
 
                 # Add or update priority
                 next_heuristic = heuristic_func(next_state, goal_state)

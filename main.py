@@ -55,7 +55,10 @@ def main(args):
 
     # Solvers with each heuristics
     demo_heuristics_func_set = {"h0": h0}
-    heuristics_func_set = {"h1": h0, "h2": h2}
+    heuristics_func_set = {
+                            #"h1": h1,
+                           "h2": h2
+                           }
 
     solvers = {
         # "UCS": (UCS(), {
@@ -112,6 +115,7 @@ def main(args):
                         # Display solution states in console
                         # print(f"Move tile {tile_moved}, for cost of {move_cost}.")
                         # print(state)
+                        # print()
 
                         total_cost += move_cost
                         sol_file.write(f"{tile_moved} {str(move_cost)} {state.to_single_line_str()}\n")
@@ -122,7 +126,7 @@ def main(args):
                 # Search path file
                 with open(out_search_file, 'w') as search_file:
                     for n in visited_nodes:
-                        g, h = visited_nodes[n]
+                        f, g, h = visited_nodes[n]
                         f = solver.f(g, h)
                         search_file.write(f"{f} {g} {h} {n.to_single_line_str()}\n")
 

@@ -67,7 +67,7 @@ class Puzzle(ISolvable):
             y += 1
             x = 0
 
-        raise Exception("No empty tile marked as '0' found in the puzzle definition.")
+        raise Exception(f"No tile marked as '{tile}' found in the puzzle definition.")
 
     def get_moves(self) -> List[PuzzleMove]:
         moves: List[PuzzleMove] = []
