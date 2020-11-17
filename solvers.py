@@ -25,23 +25,8 @@ class ISolvable(metaclass=ABCMeta):
 
 
 class Solver(ABC):
-    @abstractmethod
-    def solve(self, current: ISolvable, goal_states: List[ISolvable],
-              heuristic_func: Callable[[ISolvable, ISolvable], float]):
-        pass
-
-    @abstractmethod
-    def f(self, g, h):
-        pass
-
-
-class AStar(Solver):
-    def __init__(self):
-        self.search_path = None
-        self.nodes_costs = None
-
     # Retracing steps of solution backward in resulting search graph
-    def __retrace_steps(self, search_graph: Dict[ISolvable, Tuple[ISolvable, Any]], final_state: ISolvable) -> List[
+    def _retrace_steps(self, search_graph: Dict[ISolvable, Tuple[ISolvable, Any]], final_state: ISolvable) -> List[
         Tuple[ISolvable, int, int]]:
         steps = []
         c = final_state
@@ -54,17 +39,24 @@ class AStar(Solver):
         steps.reverse()
         return steps
 
+    @abstractmethod
+    def solve(self, current: ISolvable, goal_states: List[ISolvable],
+              heuristic_func: Callable[[ISolvable, ISolvable], float]):
+        pass
+
+    @abstractmethod
+    def f(self, g, h):
+        pass
+
+
+class AStar(Solver):
+
     def solve(self, current: ISolvable, goal_states: List[ISolvable],
               heuristic_func: Callable[[ISolvable, ISolvable], int]) -> \
             Tuple[List[Tuple[ISolvable, int, int]], Dict[ISolvable, Tuple[int, int, int]]]:
-        self.nodes_costs = {}
-        initial_heuristic = float('inf')
-        for goal in goal_states:
-            initial_heuristic = min(initial_heuristic, heuristic_func(current, goal))
-
         states_graph: Dict[ISolvable, Tuple[ISolvable, Any]] = {}  # Key: Node, Value: FromNode
         open_states_set = PriorityQueue()
-        open_states_set.enqueue((current, 0, initial_heuristic), 0)
+        open_states_set.enqueue((current, 0, 0), 0)
         closed_states_set = {}
 
         while not open_states_set.empty():
@@ -74,7 +66,7 @@ class AStar(Solver):
 
             # Reached a goal, return search data
             if current_state in goal_states:
-                return self.__retrace_steps(states_graph, current_state), closed_states_set
+                return self._retrace_steps(states_graph, current_state), closed_states_set
 
             next_moves = current_state.get_moves()
             for puzzle_move in next_moves:
@@ -115,7 +107,45 @@ class AStar(Solver):
 
 
 # Uniform Cost Search
-class UCS(AStar):
+class UCS(Solver):
+
+    def solve(self, current: ISolvable, goal_states: List[ISolvable],
+              heuristic_func: Callable[[ISolvable, ISolvable], float]):
+        self.nodes_costs = {}
+        states_graph: Dict[ISolvable, Tuple[ISolvable, Any]] = {}  # Key: Node, Value: FromNode
+        open_states_set = PriorityQueue()
+        open_states_set.enqueue((current, 0, 0), 0)
+        closed_states_set = {}
+
+        while not open_states_set.empty():
+            cost, node = open_states_set.dequeue()
+            current_state, _, _ = node
+            closed_states_set[current_state] = (cost, cost, 0)  # Add in ordered dict representing the closed set
+
+            # Reached a goal, return search data
+            if current_state in goal_states:
+                return self._retrace_steps(states_graph, current_state), closed_states_set
+
+            next_moves = current_state.get_moves()
+            for puzzle_move in next_moves:
+                next_state = current_state.compute_move(current_state, puzzle_move)
+
+                # CostSoFar + MoveCost
+                next_cost = cost + puzzle_move[0]
+
+                # Closed already & better solution, back to open
+                if (next_state not in closed_states_set) or (
+                        next_state in closed_states_set and closed_states_set[next_state][0] > next_cost):
+                    if next_state in closed_states_set:
+                        del closed_states_set[next_state]
+
+                    # Add or Update
+                    open_states_set.enqueue((next_state, next_cost, 0), next_cost)
+                    states_graph[next_state] = (current_state, puzzle_move)
+
+        # If open set empty, failed to solve
+        return None, None
+
     def f(self, g, h):
         # Search by: total cost from the root to node n
         return g

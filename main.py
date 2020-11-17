@@ -60,7 +60,6 @@ def main(args):
     heuristics_func_set = {"h1": h1, "h2": h2}
     test = {"h1": h1}
 
-
     solvers = {
         "UCS": (UCS(), {
             "default": lambda current, goal: 0
