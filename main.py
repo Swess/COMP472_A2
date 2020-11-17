@@ -2,6 +2,8 @@ import argparse
 import json
 import random
 import time
+import concurrent.futures
+from concurrent.futures.thread import ThreadPoolExecutor
 
 from helpers import *
 from heuristics import h0, h1, h2
@@ -58,14 +60,12 @@ def main(args):
     heuristics_func_set = {"h1": h1, "h2": h2}
     test = {"h1": h1}
 
-    heuristics_func_set = test
-
 
     solvers = {
-        # "UCS": (UCS(), {
-        #     "default": lambda current, goal: 0
-        # }),
-        # "GBFS": (GBFS(), heuristics_func_set),
+        "UCS": (UCS(), {
+            "default": lambda current, goal: 0
+        }),
+        "GBFS": (GBFS(), heuristics_func_set),
         "AStar": (AStar(), heuristics_func_set)
     }
 
@@ -91,14 +91,19 @@ def main(args):
                 out_sol_file = f"./{out_dir}{f_name}_solution.txt"
                 out_search_file = f"./{out_dir}{f_name}_search.txt"
 
-                # TODO: Parallel Search for both goals
-                t_start = time.monotonic()
-                search_graph, visited_nodes = solver.solve(p, goals[0], h_func)
-                elapsed = time.monotonic() - t_start
-                elapsed = "{:.4f}".format(elapsed)
+                steps_to_goal = None
+                with ThreadPoolExecutor(max_workers=1) as executor:
+                    t_start = time.monotonic()
+                    future = executor.submit(solver.solve, p, list(goals), h_func)
+                    try:
+                        steps_to_goal, visited_nodes = future.result(timeout=60)
+                        elapsed = time.monotonic() - t_start
+                        elapsed = "{:.4f}".format(elapsed)
+                    except concurrent.futures.TimeoutError as e:
+                        print(f"Could not find solution in 60sec.")
 
                 # Failed
-                if search_graph is None:
+                if steps_to_goal is None:
                     print("Failed to find solution...")
                     with open(out_sol_file, 'w') as sol_file:
                         sol_file.write("no solution")
@@ -109,14 +114,13 @@ def main(args):
                 print(f"Solved it in {elapsed} seconds!")
 
                 # Solution output file
-                steps_to_goal = retrace_steps(search_graph, goals[0])
                 with open(out_sol_file, 'w') as sol_file:
                     total_cost = 0
                     for state, move_cost, tile_moved in steps_to_goal:
                         # Display solution states in console
-                        # print(f"Move tile {tile_moved}, for cost of {move_cost}.")
-                        # print(state)
-                        # print()
+                        print(f"Move tile {tile_moved}, for cost of {move_cost}.")
+                        print(state)
+                        print()
 
                         total_cost += move_cost
                         sol_file.write(f"{tile_moved} {str(move_cost)} {state.to_single_line_str()}\n")

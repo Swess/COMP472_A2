@@ -21,7 +21,7 @@ def h1(current: Puzzle, goal: Puzzle) -> int:
     for x in range(dim[0]):
         for y in range(dim[1]):
             v = current[(x, y)]
-            shifted_v = (v - 1) % count
+            shifted_v = (v - 1) % count  # Value-1, wrapped if needed
             if is_hor_goal:
                 expected_x = shifted_v % dim[0]
                 expected_y = math.floor(shifted_v / dim[0])
