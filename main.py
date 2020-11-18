@@ -68,6 +68,7 @@ def main(args):
         "AStar": (AStar(), heuristics_func_set)
     }
 
+    all_metrics = []
     for i, p in enumerate(puzzles):
         print("===============")
         print("Will solve puzzle:")
@@ -108,18 +109,25 @@ def main(args):
                         sol_file.write("no solution")
                     with open(out_search_file, 'w') as search_file:
                         search_file.write("no solution")
+
+                    # Register as not found
+                    all_metrics.append({
+                        "solver": name,
+                        "heuristic_function": h_name,
+                        "no_sol": True
+                    })
                     continue
 
                 print(f"Solved it in {elapsed} seconds!")
 
                 # Solution output file
+                total_cost = 0
                 with open(out_sol_file, 'w') as sol_file:
-                    total_cost = 0
                     for state, move_cost, tile_moved in steps_to_goal:
                         # Display solution states in console
-                        print(f"Move tile {tile_moved}, for cost of {move_cost}.")
-                        print(state)
-                        print()
+                        # print(f"Move tile {tile_moved}, for cost of {move_cost}.")
+                        # print(state)
+                        # print()
 
                         total_cost += move_cost
                         sol_file.write(f"{tile_moved} {str(move_cost)} {state.to_single_line_str()}\n")
@@ -136,6 +144,91 @@ def main(args):
 
                 print(f"Search path at '{out_search_file}'.")
 
+                # Add Metrics
+                all_metrics.append({
+                    "solver": name,
+                    "heuristic_function": h_name,
+                    "solution_length": len(steps_to_goal),
+                    "search_length": len(visited_nodes),
+                    "total_cost": float(total_cost),
+                    "elapsed": float(elapsed)
+                })
+
+    ########
+    # All metrics
+    total_nb_run = len(all_metrics)
+    h_names = [h for h in heuristics_func_set if h != "default"]
+
+    print("\n\n\n>>>>>>>>>>>>>>>>>")
+    print("Metrics >>>>>>>>>")
+    print(">>>>>>>>>>>>>>>>>\n")
+    if total_nb_run == 0:
+        print("Nothing to show...")
+        return
+
+    # No Solutions...
+    group = [m for m in all_metrics if 'no_sol' in m]
+    total = len(group)
+    print("| No Solution |")
+    print(f"Total: {total}")
+    print(f"Average: {total / total_nb_run} ({total} / {total_nb_run})\n")
+
+    # By solver
+    for s_name in solvers:
+        s_group = len([m for m in all_metrics if m["solver"] == s_name])
+        s_total_count = len([m for m in group if m["solver"] == s_name])
+        if s_group == 0:
+            continue
+
+        print(f"{s_name} Average: {s_total_count / s_group} ({s_total_count} / {s_group})")
+
+    # By Heuristic
+    for h_name in h_names:
+        h_group = len([m for m in all_metrics if m["heuristic_function"] == h_name])
+        h_total_m = len([m for m in group if m["heuristic_function"] == h_name])
+        if h_group == 0:
+            continue
+        print(f"{h_name} Average: {h_total_m / h_group} ({h_total_m} / {h_group})")
+
+    print("\n\n")
+
+    # Other numerical metrics
+    metrics = {
+        # "No Solution": [m for m in all_metrics if 'no_sol' in m],
+        "Solution Length": "solution_length",
+        "Search Length": "search_length",
+        "Total Cost": "total_cost",
+        "Elapsed": "elapsed"
+    }
+
+    for metric_display_name in metrics:
+        metric = metrics[metric_display_name]
+        group = [m[metric] for m in all_metrics]
+        group_count = len(group)
+        group_sum = sum(group)
+
+        print(f"<| {metric_display_name} |>")
+        print(f"Total: {group_sum}")
+        print(f"Average: {group_sum / group_count} ({group_sum} / {group_count})\n")
+
+        # By solver
+        for s_name in solvers:
+            s_group = [m[metric] for m in all_metrics if "solver" in m and m["solver"] == s_name]
+            s_group_sum = sum(s_group)
+            if len(s_group) == 0:
+                continue
+
+            print(f"{s_name} Average: {s_group_sum / len(s_group)} ({s_group_sum} / {len(s_group)})")
+
+        # By Heuristic
+        for h_name in h_names:
+            h_group = [m[metric] for m in all_metrics if "heuristic_function" in m and m["heuristic_function"] == h_name]
+            h_group_sum = sum(h_group)
+            if len(h_group) == 0:
+                continue
+            print(f"{h_name} Average: {h_group_sum / len(h_group)} ({h_group_sum} / {len(h_group)})")
+
+        print("\n\n\n")
 
 if __name__ == "__main__":
     print("<<<<<<<<<<<<>>>>>>>>>>>>")
