@@ -46,7 +46,7 @@ def retrace_steps(search_graph: Dict[Puzzle, Tuple[Puzzle, Any]], final_state: P
 def main(args):
     gen, in_file, out_dir, dimensions = args.generate, args.input_file, args.output, json.loads(args.dimensions)
 
-    if len(dimensions) < 2 or (dimensions[0] * dimensions[1]) % 2 != 0:
+    if len(dimensions) < 2:
         raise ValueError("Invalid dimensions given.")
 
     if gen > 0:
@@ -58,16 +58,19 @@ def main(args):
     # Solvers with each heuristics
     demo_heuristics_func_set = {"h0": h0}
     heuristics_func_set = {"h1": h1, "h2": h2}
-    test = {"h1": h1}
+    best = {"h1": h1}
+
+    heuristics_func_set = best
 
     solvers = {
-        "UCS": (UCS(), {
-            "default": lambda current, goal: 0
-        }),
+        # "UCS": (UCS(), {
+        #     "default": lambda current, goal: 0
+        # }),
         "GBFS": (GBFS(), heuristics_func_set),
         "AStar": (AStar(), heuristics_func_set)
     }
 
+    executor = ThreadPoolExecutor(max_workers=2)
     all_metrics = []
     for i, p in enumerate(puzzles):
         print("===============")
@@ -92,18 +95,15 @@ def main(args):
                 out_search_file = f"./{out_dir}{f_name}_search.txt"
 
                 steps_to_goal = None
-                with ThreadPoolExecutor(max_workers=1) as executor:
-                    t_start = time.monotonic()
-                    future = executor.submit(solver.solve, p, list(goals), h_func)
-                    try:
-                        steps_to_goal, visited_nodes = future.result(timeout=60)
-                        elapsed = time.monotonic() - t_start
-                        elapsed = "{:.4f}".format(elapsed)
-                    except concurrent.futures.TimeoutError as e:
-                        print(f"Could not find solution in 60sec.")
-
-                # Failed
-                if steps_to_goal is None:
+                t_start = time.monotonic()
+                future = executor.submit(solver.solve, p, list(goals), h_func)
+                try:
+                    steps_to_goal, visited_nodes = future.result(timeout=60)
+                    elapsed = time.monotonic() - t_start
+                    elapsed = "{:.4f}".format(elapsed)
+                except concurrent.futures.TimeoutError as e:
+                    future.cancel()
+                    print(f"Could not find solution in 60sec.")
                     print("Failed to find solution...")
                     with open(out_sol_file, 'w') as sol_file:
                         sol_file.write("no solution")
@@ -169,7 +169,7 @@ def main(args):
     # No Solutions...
     group = [m for m in all_metrics if 'no_sol' in m]
     total = len(group)
-    print("| No Solution |")
+    print("<| No Solution |>")
     print(f"Total: {total}")
     print(f"Average: {total / total_nb_run} ({total} / {total_nb_run})\n")
 
@@ -222,13 +222,27 @@ def main(args):
 
         # By Heuristic
         for h_name in h_names:
-            h_group = [m[metric] for m in all_metrics if "heuristic_function" in m and m["heuristic_function"] == h_name]
+            h_group = [m[metric] for m in all_metrics if
+                       "heuristic_function" in m and m["heuristic_function"] == h_name]
             h_group_sum = sum(h_group)
             if len(h_group) == 0:
                 continue
             print(f"{h_name} Average: {h_group_sum / len(h_group)} ({h_group_sum} / {len(h_group)})")
 
+        print()
+        # By solver -> Heuristic
+        for s_name in solvers:
+            for h_name in h_names:
+                s_group = [m[metric] for m in all_metrics if ("solver" in m and m["solver"] == s_name) and (
+                            "heuristic_function" in m and m["heuristic_function"] == h_name)]
+                s_group_sum = sum(s_group)
+                if len(s_group) == 0:
+                    continue
+
+                print(f"{s_name} {h_name} Average: {s_group_sum / len(s_group)} ({s_group_sum} / {len(s_group)})")
+
         print("\n\n\n")
+
 
 if __name__ == "__main__":
     print("<<<<<<<<<<<<>>>>>>>>>>>>")
