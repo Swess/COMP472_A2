@@ -1,6 +1,6 @@
 [Github Repo](https://github.com/Swess/COMP472_A2)
 
-# COMP 472 - Assignment 1
+# COMP 472 - Assignment 2
 **Author:** Isaac Doré - 40043159
 
 # Dependencies
