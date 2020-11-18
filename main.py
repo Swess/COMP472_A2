@@ -60,12 +60,12 @@ def main(args):
     heuristics_func_set = {"h1": h1, "h2": h2}
     best = {"h1": h1}
 
-    heuristics_func_set = best
+    # heuristics_func_set = best
 
     solvers = {
-        # "UCS": (UCS(), {
-        #     "default": lambda current, goal: 0
-        # }),
+        "UCS": (UCS(), {
+            "default": lambda current, goal: 0
+        }),
         "GBFS": (GBFS(), heuristics_func_set),
         "AStar": (AStar(), heuristics_func_set)
     }
