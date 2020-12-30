@@ -1,3 +1,5 @@
+Simple sliding tile puzzle solver with 2 goal state. Simple case study & performance research.
+
 # Dependencies
 To run the code, the requirements first needs to be installed.
 If you are using a Virtual Environment (venv), activate it first.
